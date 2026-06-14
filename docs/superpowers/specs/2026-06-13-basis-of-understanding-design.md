@@ -42,7 +42,7 @@ bug to be corrected.
 | Intent | Art / exploration | Output need not be semantically meaningful |
 | Embeddings | Pretrained GloVe `glove.6B.{100,300}d` via gensim | 100-d in / 100-d out, no truncation; clean dim swap |
 | Web stack | Gradio | A few lines wraps the pipeline; Python-native end to end |
-| LLL engine | Pure-Python exact integer LLL (Fraction-based GSO) | No native deps; ample speed for 100×100; readable |
+| LLL engine | **`fpylll` (default)**, with the pure-Python exact LLL retained as a reference/oracle backend | Pure-Python exact (Fraction GSO) is correct but ~n^6.5 — a 100×100 run extrapolates to days. `fpylll` does 100×100 in ~0.02s. Native deps (`brew install fplll gmp mpfr qd`) accepted. Engine selectable via `Config.lll_backend`. |
 | Real→integer | Scale by `SCALE`, round to integer matrix | Lattices are defined over the integers |
 | δ (Lovász) | 0.99 default, configurable | Strongest practical reduction; speed irrelevant at this size |
 
@@ -65,8 +65,12 @@ narrow interfaces.
 → scale → LLL → un-scale → nearest-neighbor decode → words`.
 
 The model loads once at startup and is passed in, not reloaded per request. The
-`lll.py` interface is deliberately narrow (matrix in, reduced basis out) so an
-`fpylll` backend can be swapped in later as a one-module change.
+`lll.py` interface is deliberately narrow (matrix in, reduced basis out). It ships
+two backends behind that interface: `fpylll` (the default, fast enough for the
+100-d/300-d targets) and the pure-Python exact LLL (kept as a readable reference
+and cross-validation oracle for tests). `Config.lll_backend` selects between them.
+Both return the same `ReducedBasis` (reduced integer basis, un-scaled floats, and
+the unimodular transform `U` with `U @ scaled_input == reduced_int`).
 
 ## Algorithm details & edge cases
 
