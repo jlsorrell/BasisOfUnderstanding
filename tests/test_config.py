@@ -8,6 +8,7 @@ def test_defaults():
     assert c.delta == 0.99
     assert c.rank_tol == 1e-9
     assert c.metric == "euclidean"
+    assert c.lll_backend == "fpylll"
 
 
 def test_override():

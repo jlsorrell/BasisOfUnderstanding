@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 
 import numpy as np
+from fpylll import IntegerMatrix, LLL, GSO
 
 
 @dataclass
@@ -63,9 +64,32 @@ def _lll_int(basis, delta):
     return B, U
 
 
-def reduce(matrix: np.ndarray, scale: int, delta: float) -> ReducedBasis:
-    """Scale float rows to integers, run exact LLL, return ReducedBasis."""
+def _lll_fpylll(basis, delta, eta=0.51):
+    """LLL via fpylll. Returns (reduced_rows, U) with U @ basis == reduced."""
+    rows = [[int(x) for x in row] for row in basis]
+    if not rows:
+        return [], []
+    A = IntegerMatrix.from_matrix(rows)
+    U = IntegerMatrix.identity(A.nrows)
+    M = GSO.Mat(A, U=U)
+    M.update_gso()
+    LLL.Reduction(M, delta=float(delta), eta=eta)()
+    reduced = [[A[i, j] for j in range(A.ncols)] for i in range(A.nrows)]
+    Umat = [[U[i, j] for j in range(U.ncols)] for i in range(U.nrows)]
+    return reduced, Umat
+
+
+def reduce(
+    matrix: np.ndarray, scale: int, delta: float, backend: str = "fpylll"
+) -> ReducedBasis:
+    """Scale float rows to integers, run LLL, return ReducedBasis."""
     scaled = np.rint(np.asarray(matrix, dtype=np.float64) * scale).astype(np.int64)
-    reduced_int, U = _lll_int(scaled.tolist(), Fraction(delta).limit_denominator(10**9))
+    int_rows = scaled.tolist()
+    if backend == "fpylll":
+        reduced_int, U = _lll_fpylll(int_rows, float(delta))
+    elif backend == "python":
+        reduced_int, U = _lll_int(int_rows, Fraction(delta).limit_denominator(10**9))
+    else:
+        raise ValueError(f"unknown backend: {backend!r}")
     reduced_float = np.array(reduced_int, dtype=np.float64) / scale
     return ReducedBasis(reduced_int=reduced_int, reduced_float=reduced_float, transform=U)

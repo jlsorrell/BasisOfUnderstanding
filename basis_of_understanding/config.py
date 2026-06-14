@@ -11,3 +11,4 @@ class Config:
     rank_tol: float = 1e-9
     model_path: str = "data/glove.6B.100d.txt"
     metric: str = "euclidean"
+    lll_backend: str = "fpylll"
