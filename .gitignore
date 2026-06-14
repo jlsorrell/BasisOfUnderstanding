@@ -1,0 +1,7 @@
+# GloVe vectors / model cache
+data/
+*.txt.gz
+glove*.txt
+__pycache__/
+*.pyc
+.venv/
