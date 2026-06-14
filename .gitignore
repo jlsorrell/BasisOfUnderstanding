@@ -5,3 +5,4 @@ glove*.txt
 __pycache__/
 *.pyc
 .venv/
+*.egg-info/
