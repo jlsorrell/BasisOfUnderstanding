@@ -4,15 +4,18 @@ from .config import Config
 from .embeddings import load_model
 from .pipeline import run
 
-_CONFIG = Config()
-_MODEL = None  # lazy-loaded on first request
+_MODELS = {}  # path -> KeyedVectors, lazy-loaded and cached per dimension
 
 
 def _get_model(path: str):
-    global _MODEL
-    if _MODEL is None:
-        _MODEL = load_model(path)
-    return _MODEL
+    if path not in _MODELS:
+        _MODELS[path] = load_model(path)
+    return _MODELS[path]
+
+
+def _model_path_for_dim(embedding_dim: int) -> str:
+    """The GloVe file for a given dimension (e.g. data/glove.6B.300d.txt)."""
+    return f"data/glove.6B.{embedding_dim}d.txt"
 
 
 def format_result(res, embedding_dim: int):
@@ -36,7 +39,13 @@ def _run(text, uploaded, embedding_dim, delta, scale):
     if uploaded:
         with open(uploaded, "r", encoding="utf-8", errors="ignore") as fh:
             content = fh.read()
-    cfg = Config(embedding_dim=int(embedding_dim), delta=float(delta), scale=int(scale))
+    dim = int(embedding_dim)
+    cfg = Config(
+        embedding_dim=dim,
+        delta=float(delta),
+        scale=int(scale),
+        model_path=_model_path_for_dim(dim),
+    )
     res = run(content, _get_model(cfg.model_path), cfg)
     return format_result(res, cfg.embedding_dim)
 
